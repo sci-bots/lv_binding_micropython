@@ -150,6 +150,7 @@ STATIC void disp_spi_init(ILI9341_t *self)
 {
 	esp_err_t ret;
 
+#ifndef LV_ILI9341_SHARE_SPI_BUS
 	spi_bus_config_t buscfg={
 		.miso_io_num=self->miso,
 		.mosi_io_num=self->mosi,
@@ -158,6 +159,7 @@ STATIC void disp_spi_init(ILI9341_t *self)
 		.quadhd_io_num=-1,
 		.max_transfer_sz=128*1024,
 	};
+#endif
 
 	spi_device_interface_config_t devcfg={
 		.clock_speed_hz=self->mhz*1000*1000, //Clock out at DISP_SPI_MHZ MHz
@@ -166,10 +168,13 @@ STATIC void disp_spi_init(ILI9341_t *self)
 		.queue_size=1,
 		.pre_cb=NULL,
 		.post_cb=NULL,
+#ifndef LV_ILI9341_SHARE_SPI_BUS
 		.flags=SPI_DEVICE_HALFDUPLEX,
+#endif
 		.duty_cycle_pos=128,
 	};
 
+#ifndef LV_ILI9341_SHARE_SPI_BUS
 	gpio_pad_select_gpio(self->miso);
     gpio_pad_select_gpio(self->mosi);
     gpio_pad_select_gpio(self->clk);
@@ -185,6 +190,7 @@ STATIC void disp_spi_init(ILI9341_t *self)
 	ret=spi_bus_initialize(self->spihost, &buscfg, 1);
     if (ret != ESP_OK) nlr_raise(
         mp_obj_new_exception_msg(&mp_type_RuntimeError, "Failed initializing SPI bus"));
+#endif
 
 	//Attach the LCD to the SPI bus
 	ret=spi_bus_add_device(self->spihost, &devcfg, &self->spi);
@@ -241,7 +247,11 @@ STATIC const lcd_init_cmd_t ili_init_cmds[]={
 		{0xC1, {0x11}, 1},			/*Power control */
 		{0xC5, {0x35, 0x3E}, 2},	/*VCOM control*/
 		{0xC7, {0xBE}, 1},			/*VCOM control*/
+#ifdef LV_M5STACK
+		{0x36, {0x18}, 1},			/*Memory Access Control (COLOR_MODE_BGR | MADCTL_ML)*/ 
+#else
 		{0x36, {0x48}, 1},			/*Memory Access Control*/
+#endif
 		{0x3A, {0x55}, 1},			/*Pixel Format Set*/
 		{0xB1, {0x00, 0x1B}, 2},
 		{0xF2, {0x08}, 1},
@@ -292,6 +302,11 @@ STATIC mp_obj_t mp_init_ILI9341(mp_obj_t self_in)
 		cmd++;
 	}
 
+#ifdef LV_M5STACK
+	//Invert the display colors
+	ili9441_send_cmd(self, 0x21);
+#endif
+
 	///Enable backlight
 	//printf("Enable backlight.\n");
 	if (self->backlight != -1) gpio_set_level(self->backlight, 1);       
@@ -326,6 +341,7 @@ STATIC void ili9431_flush(struct _disp_drv_t * disp_drv, const lv_area_t * area,
 
 	uint32_t size = (area->x2 - area->x1 + 1) * (area->y2 - area->y1 + 1);
 
+#ifndef LV_M5STACK
 	/*Byte swapping is required*/
 	uint32_t i;
 	uint8_t * color_u8 = (uint8_t *) color_p;
@@ -335,6 +351,7 @@ STATIC void ili9431_flush(struct _disp_drv_t * disp_drv, const lv_area_t * area,
 		color_u8[i + 1] = color_u8[i];
 		color_u8[i] = color_tmp;
 	}
+#endif
 
 	ili9341_send_data(self, (void*)color_p, size * 2);
 
