@@ -150,23 +150,23 @@ class ili9341:
         self.finalizer = lvesp32.cb_finalizer(self.deinit)
         lvesp32.init()
 
-	buscfg = esp.spi_bus_config_t({
+        buscfg = esp.spi_bus_config_t({
             "miso_io_num": self.miso,
-	    "mosi_io_num": self.mosi,
-	    "sclk_io_num": self.clk,
-	    "quadwp_io_num": -1,
-	    "quadhd_io_num": -1,
-	    "max_transfer_sz": self.buf_size,
-	})
+            "mosi_io_num": self.mosi,
+            "sclk_io_num": self.clk,
+            "quadwp_io_num": -1,
+            "quadhd_io_num": -1,
+            "max_transfer_sz": self.buf_size,
+        })
 
-	devcfg = esp.spi_device_interface_config_t({
+        devcfg = esp.spi_device_interface_config_t({
             "clock_speed_hz": self.mhz*1000*1000,   # Clock out at DISP_SPI_MHZ MHz
             "mode": 0,                              # SPI mode 0
             "spics_io_num": self.cs,                # CS pin
             "queue_size": 2,
             "flags": esp.SPI_DEVICE.HALFDUPLEX,
             "duty_cycle_pos": 128,
-	})
+        })
 
         if self.hybrid and hasattr(esp, 'ili9341_post_cb_isr'):
             devcfg.pre_cb = None
@@ -177,7 +177,7 @@ class ili9341:
 
         esp.gpio_pad_select_gpio(self.cs)
 
-	# Initialize the SPI bus, if needed.
+        # Initialize the SPI bus, if needed.
 
         if buscfg.miso_io_num >= 0 and \
            buscfg.mosi_io_num >= 0 and \
@@ -199,10 +199,10 @@ class ili9341:
         self.cmd_trans_data = self.trans_buffer.__dereference__(1)
         self.word_trans_data = self.trans_buffer.__dereference__(4)
 
-	# Attach the LCD to the SPI bus
+        # Attach the LCD to the SPI bus
 
         ptr_to_spi = esp.C_Pointer()
-	ret = esp.spi_bus_add_device(self.spihost, devcfg, ptr_to_spi)
+        ret = esp.spi_bus_add_device(self.spihost, devcfg, ptr_to_spi)
         if ret != 0: raise RuntimeError("Failed adding SPI device")
         self.spi = ptr_to_spi.ptr_val
 
@@ -303,37 +303,37 @@ class ili9341:
     def send_cmd(self, cmd):
         esp.gpio_set_level(self.dc, 0)	    # Command mode
         self.cmd_trans_data[0] = cmd
-	self.spi_send(self.cmd_trans_data)
+        self.spi_send(self.cmd_trans_data)
 
     def send_data(self, data):
-	esp.gpio_set_level(self.dc, 1)	    # Data mode
+        esp.gpio_set_level(self.dc, 1)	    # Data mode
         if len(data) > TRANS_BUFFER_LEN: raise RuntimeError('Data too long, please use DMA!')
         trans_data = self.trans_buffer.__dereference__(len(data))
         trans_data[:] = data[:]
-	self.spi_send(trans_data)
+        self.spi_send(trans_data)
 
     def send_trans_word(self):
-	esp.gpio_set_level(self.dc, 1)	    # Data mode
-	self.spi_send(self.word_trans_data)
+        esp.gpio_set_level(self.dc, 1)	    # Data mode
+        self.spi_send(self.word_trans_data)
 
     def send_data_dma(self, data):          # data should be allocated as DMA-able memory
         esp.gpio_set_level(self.dc, 1)      # Data mode
-	self.spi_send_dma(data)
+        self.spi_send_dma(data)
 
     ######################################################
 
     def init(self):
         self.disp_spi_init()
 
-	# Initialize non-SPI GPIOs
+        # Initialize non-SPI GPIOs
 
         esp.gpio_pad_select_gpio(self.dc)
         esp.gpio_pad_select_gpio(self.rst)
         if self.backlight != -1: esp.gpio_pad_select_gpio(self.backlight)
         if self.power != -1: esp.gpio_pad_select_gpio(self.power)
 
-	esp.gpio_set_direction(self.dc, esp.GPIO_MODE.OUTPUT)
-	esp.gpio_set_direction(self.rst, esp.GPIO_MODE.OUTPUT)
+        esp.gpio_set_direction(self.dc, esp.GPIO_MODE.OUTPUT)
+        esp.gpio_set_direction(self.rst, esp.GPIO_MODE.OUTPUT)
         if self.backlight != -1: esp.gpio_set_direction(self.backlight, esp.GPIO_MODE.OUTPUT)
         if self.power != -1: esp.gpio_set_direction(self.power, esp.GPIO_MODE.OUTPUT)
 
@@ -343,14 +343,14 @@ class ili9341:
             esp.gpio_set_level(self.power, self.power_on)
             sleep_ms(100)
 
-	# Reset the display
+        # Reset the display
 
-	esp.gpio_set_level(self.rst, 0)
+        esp.gpio_set_level(self.rst, 0)
         sleep_ms(100)
-	esp.gpio_set_level(self.rst, 1)
+        esp.gpio_set_level(self.rst, 1)
         sleep_ms(100)
 
-	# Send all the commands
+        # Send all the commands
 
         for cmd in self.init_cmds:
             self.send_cmd(cmd['cmd'])
@@ -359,9 +359,9 @@ class ili9341:
             if 'delay' in cmd:
                 sleep_ms(cmd['delay'])
 
-	print("ILI9341 initialization completed")
+        print("ILI9341 initialization completed")
 
-	# Enable backlight
+        # Enable backlight
 
         if self.backlight != -1:
             print("Enable backlight")
@@ -383,7 +383,7 @@ class ili9341:
 
         # esp.spi_device_acquire_bus(self.spi, esp.ESP.MAX_DELAY)
 
-	# Column addresses
+        # Column addresses
 
         self.send_cmd(0x2A);
 
@@ -393,9 +393,9 @@ class ili9341:
         self.word_trans_data[3] = area.x2 & 0xFF
         self.send_trans_word()
 
-	# Page addresses
+        # Page addresses
 
-	self.send_cmd(0x2B);
+        self.send_cmd(0x2B);
 
         self.word_trans_data[0] = (area.y1 >> 8) & 0xFF
         self.word_trans_data[1] = area.y1 & 0xFF
@@ -403,11 +403,11 @@ class ili9341:
         self.word_trans_data[3] = area.y2 & 0xFF
         self.send_trans_word()
 
-	# Memory write by DMA, disp_flush_ready when finished
+        # Memory write by DMA, disp_flush_ready when finished
 
-	self.send_cmd(0x2C)
+        self.send_cmd(0x2C)
 
-	size = (area.x2 - area.x1 + 1) * (area.y2 - area.y1 + 1)
+        size = (area.x2 - area.x1 + 1) * (area.y2 - area.y1 + 1)
         data_view = color_p.__dereference__(size * lv.color_t.SIZE)
 
         esp.get_ccount(self.end_time_ptr)
@@ -416,7 +416,7 @@ class ili9341:
         esp.get_ccount(self.start_time_ptr)
 
         self.send_data_dma(data_view)
-	
+
     ######################################################
 
     monitor_acc_time = 0
