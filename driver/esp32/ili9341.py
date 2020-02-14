@@ -150,6 +150,7 @@ class ili9341:
         self.finalizer = lvesp32.cb_finalizer(self.deinit)
         lvesp32.init()
 
+        """
         buscfg = esp.spi_bus_config_t({
             "miso_io_num": self.miso,
             "mosi_io_num": self.mosi,
@@ -158,13 +159,14 @@ class ili9341:
             "quadhd_io_num": -1,
             "max_transfer_sz": self.buf_size,
         })
+        """
 
         devcfg = esp.spi_device_interface_config_t({
             "clock_speed_hz": self.mhz*1000*1000,   # Clock out at DISP_SPI_MHZ MHz
             "mode": 0,                              # SPI mode 0
             "spics_io_num": self.cs,                # CS pin
-            "queue_size": 2,
-            "flags": esp.SPI_DEVICE.HALFDUPLEX,
+            "queue_size": 1,
+            #"flags": esp.SPI_DEVICE.HALFDUPLEX,
             "duty_cycle_pos": 128,
         })
 
@@ -175,10 +177,11 @@ class ili9341:
             devcfg.pre_cb = esp.spi_pre_cb_isr
             devcfg.post_cb = esp.spi_post_cb_isr
 
-        esp.gpio_pad_select_gpio(self.cs)
+        #esp.gpio_pad_select_gpio(self.cs)
 
         # Initialize the SPI bus, if needed.
 
+        """
         if buscfg.miso_io_num >= 0 and \
            buscfg.mosi_io_num >= 0 and \
            buscfg.sclk_io_num >= 0:
@@ -194,7 +197,8 @@ class ili9341:
 
                 ret = esp.spi_bus_initialize(self.spihost, buscfg, 1)
                 if ret != 0: raise RuntimeError("Failed initializing SPI bus")
-
+        """
+        
         self.trans_buffer = esp.heap_caps_malloc(TRANS_BUFFER_LEN, esp.MALLOC_CAP.DMA)
         self.cmd_trans_data = self.trans_buffer.__dereference__(1)
         self.word_trans_data = self.trans_buffer.__dereference__(4)
